@@ -1,17 +1,30 @@
 class PlayerProfile {
   const PlayerProfile({
     required this.id,
-    required this.level,
-    required this.currentXp,
+    required this.totalXp,
     required this.hp,
     required this.streakCount,
     required this.lastLogDate,
   });
 
   final String id;
-  final int level;
-  final int currentXp;
-  final int hp; // 0-100
+  final int totalXp; // cumulative; level is derived from this
+  final int hp; // 0–100
   final int streakCount;
   final DateTime lastLogDate;
+
+  PlayerProfile copyWith({
+    int? totalXp,
+    int? hp,
+    int? streakCount,
+    DateTime? lastLogDate,
+  }) {
+    return PlayerProfile(
+      id: id,
+      totalXp: totalXp ?? this.totalXp,
+      hp: hp ?? this.hp,
+      streakCount: streakCount ?? this.streakCount,
+      lastLogDate: lastLogDate ?? this.lastLogDate,
+    );
+  }
 }
