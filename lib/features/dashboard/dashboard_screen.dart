@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cuanquest/core/core.dart';
 import 'package:cuanquest/domain/domain.dart';
+import 'package:cuanquest/features/budget/providers/budget_posts_provider.dart';
+import 'package:cuanquest/features/dashboard/widgets/budget_pie_chart.dart';
 import 'package:cuanquest/features/ledger/providers/transactions_provider.dart';
 import 'package:cuanquest/features/ledger/widgets/add_transaction_sheet.dart';
 import 'package:cuanquest/features/profile/providers/player_profile_provider.dart';
@@ -9,12 +12,11 @@ import 'package:cuanquest/features/profile/providers/player_profile_provider.dar
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
-  static const double _monthlyBudget = GamificationService.defaultMonthlyBudget;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(playerProfileProvider);
-    final transactions = ref.watch(transactionsProvider);
+    final transactions = ref.watch(filteredTransactionsProvider);
+    final totalBudget = ref.watch(totalBudgetProvider);
     final theme = Theme.of(context);
 
     final level = GamificationService.levelFromTotalXp(profile.totalXp);
@@ -22,11 +24,16 @@ class DashboardScreen extends ConsumerWidget {
     final xpNeeded = GamificationService.xpRequiredForLevel(level);
     final xpProgress = GamificationService.xpProgress(profile.totalXp);
 
+    final effectiveBudget = totalBudget > 0
+        ? totalBudget
+        : GamificationService.defaultMonthlyBudget;
+
     final totalSpent = transactions
         .where((t) => t.type == TransactionType.expense)
         .fold(0.0, (s, t) => s + t.amount);
-    final manaPct = (totalSpent / _monthlyBudget).clamp(0.0, 1.0);
-    final manaRemaining = (_monthlyBudget - totalSpent).clamp(0.0, _monthlyBudget);
+    final manaPct = (totalSpent / effectiveBudget).clamp(0.0, 1.0);
+    final manaRemaining =
+        (effectiveBudget - totalSpent).clamp(0.0, effectiveBudget);
 
     return Scaffold(
       appBar: AppBar(
@@ -57,6 +64,10 @@ class DashboardScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── Budget Pie Chart ─────────────────────────────────────────────
+          const BudgetPieChart(),
+          const SizedBox(height: 12),
+
           // ── Mana Bar ────────────────────────────────────────────────────
           GameCard(
             shadowColor: AppColors.primary,
@@ -98,7 +109,7 @@ class DashboardScreen extends ConsumerWidget {
                       style: theme.textTheme.bodySmall,
                     ),
                     Text(
-                      '/ Rp ${_fmt(_monthlyBudget)}',
+                      '/ Rp ${_fmt(effectiveBudget)}',
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: AppColors.onSurface),
                     ),
@@ -110,7 +121,9 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 12),
 
           // ── HP + XP row ─────────────────────────────────────────────────
-          Row(
+          IntrinsicHeight(
+            child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: GameCard(
@@ -184,6 +197,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
+          ),
           const SizedBox(height: 24),
 
           // ── Actions ──────────────────────────────────────────────────────
@@ -201,7 +215,17 @@ class DashboardScreen extends ConsumerWidget {
             color: AppColors.secondary,
             textColor: AppColors.onSecondary,
             borderColor: AppColors.border,
-            onPressed: () {},
+            onPressed: () => context.go('/armory'),
+          ),
+          const SizedBox(height: 12),
+          GameButton(
+            label: 'EDIT BUDGET',
+            icon: Icons.pie_chart_rounded,
+            expanded: true,
+            color: AppColors.surface,
+            textColor: AppColors.primary,
+            borderColor: AppColors.primary,
+            onPressed: () => context.push('/budget'),
           ),
         ],
       ),

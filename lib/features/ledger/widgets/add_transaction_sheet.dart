@@ -7,7 +7,10 @@ import 'package:cuanquest/features/ledger/providers/transactions_provider.dart';
 import 'package:cuanquest/features/profile/providers/player_profile_provider.dart';
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
-  const AddTransactionSheet({super.key});
+  const AddTransactionSheet({super.key, this.initialTransaction});
+
+  /// When non-null, the sheet opens in edit mode with pre-filled values.
+  final Transaction? initialTransaction;
 
   @override
   ConsumerState<AddTransactionSheet> createState() =>
@@ -19,14 +22,29 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
 
-  var _type = TransactionType.expense;
-  var _selectedCategory = TransactionCategory.food;
-  var _isEssential = true;
+  late var _type = TransactionType.expense;
+  late var _selectedCategory = TransactionCategory.food;
+  late var _isEssential = true;
+
+  bool get _isEditMode => widget.initialTransaction != null;
 
   List<TransactionCategory> get _categories =>
       _type == TransactionType.expense
           ? TransactionCategory.expenseCategories
           : TransactionCategory.incomeCategories;
+
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.initialTransaction;
+    if (t != null) {
+      _type = t.type;
+      _selectedCategory = t.category;
+      _isEssential = t.isEssential;
+      _amountController.text = t.amount.toStringAsFixed(0);
+      _noteController.text = t.note;
+    }
+  }
 
   @override
   void dispose() {
@@ -41,30 +59,43 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final raw = _amountController.text.replaceAll('.', '').replaceAll(',', '');
     final amount = double.parse(raw);
 
-    final oldLevel = GamificationService.levelFromTotalXp(
-      ref.read(playerProfileProvider).totalXp,
-    );
-
-    final txn = ref.read(transactionsProvider.notifier).add(
-          amount: amount,
-          category: _selectedCategory,
-          type: _type,
-          isEssential:
-              _type == TransactionType.income ? true : _isEssential,
-          note: _noteController.text.trim(),
-        );
-
-    ref.read(playerProfileProvider.notifier).applyTransaction(txn);
-
-    final newProfile = ref.read(playerProfileProvider);
-    final newLevel = GamificationService.levelFromTotalXp(newProfile.totalXp);
-    final xpGained = GamificationService.xpGainForTransaction(txn);
-
-    if (newLevel > oldLevel) {
-      await showDialog<void>(
-        context: context,
-        builder: (_) => LevelUpDialog(level: newLevel, xpGained: xpGained),
+    if (_isEditMode) {
+      // Edit mode: update without applying XP/HP
+      final updated = widget.initialTransaction!.copyWith(
+        amount: amount,
+        category: _selectedCategory,
+        type: _type,
+        isEssential: _type == TransactionType.income ? true : _isEssential,
+        note: _noteController.text.trim(),
       );
+      ref.read(transactionsProvider.notifier).update(updated);
+    } else {
+      // Add mode: apply XP/HP gamification
+      final oldLevel = GamificationService.levelFromTotalXp(
+        ref.read(playerProfileProvider).totalXp,
+      );
+
+      final txn = ref.read(transactionsProvider.notifier).add(
+            amount: amount,
+            category: _selectedCategory,
+            type: _type,
+            isEssential:
+                _type == TransactionType.income ? true : _isEssential,
+            note: _noteController.text.trim(),
+          );
+
+      ref.read(playerProfileProvider.notifier).applyTransaction(txn);
+
+      final newProfile = ref.read(playerProfileProvider);
+      final newLevel = GamificationService.levelFromTotalXp(newProfile.totalXp);
+      final xpGained = GamificationService.xpGainForTransaction(txn);
+
+      if (newLevel > oldLevel) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => LevelUpDialog(level: newLevel, xpGained: xpGained),
+        );
+      }
     }
 
     if (mounted) Navigator.of(context).pop();
@@ -100,7 +131,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                Text('Log Transaction', style: theme.textTheme.headlineSmall),
+                Text(
+                  _isEditMode ? 'Edit Transaction' : 'Log Transaction',
+                  style: theme.textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 16),
 
                 // Type toggle
@@ -268,8 +302,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
                 // Submit
                 GameButton(
-                  label: 'LOG TRANSACTION',
-                  icon: Icons.bolt_rounded,
+                  label: _isEditMode ? 'SAVE CHANGES' : 'LOG TRANSACTION',
+                  icon: _isEditMode ? Icons.check_rounded : Icons.bolt_rounded,
                   expanded: true,
                   onPressed: _submit,
                 ),

@@ -1,10 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:drift_flutter/drift_flutter.dart';
 import 'package:cuanquest/core/core.dart';
+import 'package:cuanquest/core/providers/database_provider.dart';
+import 'package:cuanquest/data/database/app_database.dart';
 
 void main() {
-  runApp(const ProviderScope(child: CuanQuestApp()));
+  final db = AppDatabase(
+    driftDatabase(
+      name: 'cuanquest',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
+      ),
+    ),
+  );
+
+  runApp(
+    ProviderScope(
+      overrides: [databaseProvider.overrideWithValue(db)],
+      child: const CuanQuestApp(),
+    ),
+  );
 }
 
 class CuanQuestApp extends StatelessWidget {

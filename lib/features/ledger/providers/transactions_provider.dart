@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cuanquest/core/providers/selected_month_provider.dart';
 import 'package:cuanquest/domain/domain.dart';
 
 const _uuid = Uuid();
@@ -26,6 +27,13 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
     );
     state = [transaction, ...state];
     return transaction;
+  }
+
+  void update(Transaction updated) {
+    state = [
+      for (final t in state)
+        if (t.id == updated.id) updated else t,
+    ];
   }
 
   void remove(String id) {
@@ -88,3 +96,16 @@ final transactionsProvider =
     NotifierProvider<TransactionsNotifier, List<Transaction>>(
   TransactionsNotifier.new,
 );
+
+/// Derived provider: transactions filtered to selected month
+final filteredTransactionsProvider = Provider<List<Transaction>>((ref) {
+  final all = ref.watch(transactionsProvider);
+  final month = ref.watch(selectedMonthProvider);
+  final key = monthYearKey(month);
+  return all.where((t) {
+    final tKey = monthYearKey(
+      DateTime(t.createdAt.year, t.createdAt.month),
+    );
+    return tKey == key;
+  }).toList();
+});

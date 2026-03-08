@@ -3,9 +3,14 @@ import 'package:cuanquest/core/core.dart';
 import 'package:cuanquest/domain/domain.dart';
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({super.key, required this.transaction});
+  const TransactionTile({
+    super.key,
+    required this.transaction,
+    this.onTap,
+  });
 
   final Transaction transaction;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -13,62 +18,65 @@ class TransactionTile extends StatelessWidget {
     final isExpense = transaction.type == TransactionType.expense;
     final amountColor = isExpense ? AppColors.error : AppColors.success;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          left: BorderSide(color: transaction.category.color, width: 4),
-          top: const BorderSide(color: AppColors.borderMuted),
-          right: const BorderSide(color: AppColors.borderMuted),
-          bottom: const BorderSide(color: AppColors.borderMuted),
-        ),
-      ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: Container(
-          width: 40,
-          height: 40,
-          color: transaction.category.color.withValues(alpha: 0.15),
-          child: Icon(
-            transaction.category.icon,
-            color: transaction.category.color,
-            size: 20,
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border(
+            left: BorderSide(color: transaction.category.color, width: 4),
+            top: const BorderSide(color: AppColors.borderMuted),
+            right: const BorderSide(color: AppColors.borderMuted),
+            bottom: const BorderSide(color: AppColors.borderMuted),
           ),
         ),
-        title: Row(
-          children: [
-            Text(
-              transaction.category.displayName,
-              style: theme.textTheme.titleSmall,
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          leading: Container(
+            width: 40,
+            height: 40,
+            color: transaction.category.color.withValues(alpha: 0.15),
+            child: Icon(
+              transaction.category.icon,
+              color: transaction.category.color,
+              size: 20,
             ),
-            const SizedBox(width: 6),
-            _Badge(
-              label: isExpense
-                  ? (transaction.isEssential ? 'Essential' : 'Want')
-                  : 'Income',
-              color: isExpense
-                  ? (transaction.isEssential
-                      ? AppColors.secondary
-                      : AppColors.primary)
-                  : AppColors.success,
+          ),
+          title: Row(
+            children: [
+              Text(
+                transaction.category.displayName,
+                style: theme.textTheme.titleSmall,
+              ),
+              const SizedBox(width: 6),
+              _Badge(
+                label: isExpense
+                    ? (transaction.isEssential ? 'Essential' : 'Want')
+                    : 'Income',
+                color: isExpense
+                    ? (transaction.isEssential
+                        ? AppColors.secondary
+                        : AppColors.primary)
+                    : AppColors.success,
+              ),
+            ],
+          ),
+          subtitle: transaction.note.isNotEmpty
+              ? Text(
+                  transaction.note,
+                  style: theme.textTheme.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                )
+              : null,
+          trailing: Text(
+            '${isExpense ? '−' : '+'} Rp ${_formatAmount(transaction.amount)}',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: amountColor,
+              fontWeight: FontWeight.w800,
             ),
-          ],
-        ),
-        subtitle: transaction.note.isNotEmpty
-            ? Text(
-                transaction.note,
-                style: theme.textTheme.bodySmall,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              )
-            : null,
-        trailing: Text(
-          '${isExpense ? '−' : '+'} Rp ${_formatAmount(transaction.amount)}',
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: amountColor,
-            fontWeight: FontWeight.w800,
           ),
         ),
       ),

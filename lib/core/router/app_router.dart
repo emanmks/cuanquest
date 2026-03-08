@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:cuanquest/core/shell/app_shell.dart';
+import 'package:cuanquest/features/budget/budget_screen.dart';
 import 'package:cuanquest/features/dashboard/dashboard_screen.dart';
 import 'package:cuanquest/features/ledger/ledger_screen.dart';
 import 'package:cuanquest/features/armory/armory_screen.dart';
@@ -26,6 +27,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfileScreen(),
+        ),
+        GoRoute(
+          path: '/budget',
+          builder: (context, state) => const BudgetScreen(),
         ),
       ],
     ),

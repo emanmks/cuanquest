@@ -97,4 +97,23 @@ class Transaction {
   final bool isEssential; // true = neutral, false = mana drain
   final String note;
   final DateTime createdAt;
+
+  Transaction copyWith({
+    double? amount,
+    TransactionCategory? category,
+    TransactionType? type,
+    bool? isEssential,
+    String? note,
+    DateTime? createdAt,
+  }) {
+    return Transaction(
+      id: id,
+      amount: amount ?? this.amount,
+      category: category ?? this.category,
+      type: type ?? this.type,
+      isEssential: isEssential ?? this.isEssential,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

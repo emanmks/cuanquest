@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cuanquest/core/core.dart';
+
 import 'package:cuanquest/domain/domain.dart';
 import 'package:cuanquest/features/ledger/providers/transactions_provider.dart';
 import 'package:cuanquest/features/ledger/widgets/add_transaction_sheet.dart';
@@ -11,7 +12,7 @@ class LedgerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactions = ref.watch(transactionsProvider);
+    final transactions = ref.watch(filteredTransactionsProvider);
     final theme = Theme.of(context);
 
     final grouped = <DateTime, List<Transaction>>{};
@@ -36,9 +37,13 @@ class LedgerScreen extends ConsumerWidget {
             ),
           ),
         ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(48),
+          child: MonthNavigator(),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openSheet(context),
+        onPressed: () => _openAddSheet(context),
         backgroundColor: AppColors.primary,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: const Icon(Icons.add_rounded, color: Colors.white),
@@ -83,7 +88,29 @@ class LedgerScreen extends ConsumerWidget {
                   children: [
                     _DateHeader(date: date, netTotal: dayNet),
                     const SizedBox(height: 8),
-                    ...dayTxns.map((t) => TransactionTile(transaction: t)),
+                    ...dayTxns.map(
+                      (t) => Dismissible(
+                        key: ValueKey(t.id),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) => _confirmDelete(context),
+                        onDismissed: (_) {
+                          ref.read(transactionsProvider.notifier).remove(t.id);
+                        },
+                        background: Container(
+                          color: AppColors.error,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          child: const Icon(
+                            Icons.delete_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                        child: TransactionTile(
+                          transaction: t,
+                          onTap: () => _openEditSheet(context, t),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                   ],
                 );
@@ -92,7 +119,7 @@ class LedgerScreen extends ConsumerWidget {
     );
   }
 
-  void _openSheet(BuildContext context) {
+  void _openAddSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -100,6 +127,41 @@ class LedgerScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       builder: (context) => const AddTransactionSheet(),
     );
+  }
+
+  void _openEditSheet(BuildContext context, Transaction t) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      builder: (context) => AddTransactionSheet(initialTransaction: t),
+    );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            title: const Text('Delete transaction?'),
+            content: const Text('This action cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('CANCEL'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                ),
+                child: const Text('DELETE'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
 
